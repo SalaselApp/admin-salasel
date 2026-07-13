@@ -14,7 +14,7 @@ export function LoginForm() {
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="password"
-          className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          className="text-sm font-medium text-gray-700 dark:text-slate-300"
         >
           Password
         </label>
@@ -25,20 +25,18 @@ export function LoginForm() {
           required
           autoFocus
           autoComplete="current-password"
-          className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:text-zinc-50 dark:focus:border-white/40"
+          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         />
       </div>
 
       {state?.error && (
-        <p className="text-sm text-red-600 dark:text-red-400">
-          {state.error}
-        </p>
+        <p className="text-sm text-red-500">{state.error}</p>
       )}
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-60 dark:hover:bg-[#ccc]"
+        className="mt-2 cursor-pointer rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>
