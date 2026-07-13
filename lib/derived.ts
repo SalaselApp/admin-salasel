@@ -20,7 +20,7 @@ export async function recomputeDerivedFields(playlistId: string): Promise<void> 
     .from("videos")
     .select("duration, uploaded_at")
     .eq("playlist_id", playlistId)
-    .returns<Pick<VideoRow, "duration" | "uploaded_at">[]>();
+    .overrideTypes<Pick<VideoRow, "duration" | "uploaded_at">[], { merge: false }>();
 
   if (fetchError) {
     throw new Error(`Failed to fetch videos for playlist ${playlistId}: ${fetchError.message}`);

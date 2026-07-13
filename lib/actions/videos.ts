@@ -129,7 +129,7 @@ export async function resyncPlaylistVideos(playlistId: string): Promise<ActionRe
     .from("videos")
     .select("id, duration, uploaded_at")
     .eq("playlist_id", trimmedId)
-    .returns<Pick<VideoRow, "id" | "duration" | "uploaded_at">[]>();
+    .overrideTypes<Pick<VideoRow, "id" | "duration" | "uploaded_at">[], { merge: false }>();
 
   if (fetchExistingError) {
     return { ok: false, error: `Failed to load existing videos: ${fetchExistingError.message}` };
