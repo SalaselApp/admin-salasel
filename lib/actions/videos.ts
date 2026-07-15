@@ -30,12 +30,29 @@ export async function addVideo(
   }
 
   const supabase = getSupabaseAdmin();
+
+  const { data: maxRow, error: maxError } = await supabase
+    .from("videos")
+    .select("position")
+    .eq("playlist_id", playlistId.trim())
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+    .overrideTypes<Pick<VideoRow, "position"> | null, { merge: false }>();
+
+  if (maxError) {
+    return { ok: false, error: `Failed to determine video position: ${maxError.message}` };
+  }
+
+  const nextPosition = (maxRow?.position ?? -1) + 1;
+
   const row: VideoRow = {
     id: result.data.id,
     playlist_id: playlistId.trim(),
     title: result.data.title,
     duration: result.data.duration,
     uploaded_at: result.data.uploadedAt,
+    position: nextPosition,
   };
 
   const { error } = await supabase.from("videos").upsert(row);
@@ -107,6 +124,64 @@ export async function removeVideo(
 }
 
 /**
+ * Persists a new drag-and-drop order for a playlist's videos. Writes the
+ * `position` column for every video in `orderedVideoIds` (index in the
+ * array = new position). Does not touch derived fields — order doesn't
+ * affect `video_count`/`duration`/dates.
+ */
+export async function reorderVideos(
+  playlistId: string,
+  orderedVideoIds: string[],
+): Promise<ActionResult> {
+  await requireSession();
+
+  if (typeof playlistId !== "string" || playlistId.trim().length === 0) {
+    return { ok: false, error: "Missing playlist ID." };
+  }
+  if (!Array.isArray(orderedVideoIds) || orderedVideoIds.some((id) => typeof id !== "string")) {
+    return { ok: false, error: "Invalid video order." };
+  }
+
+  const trimmedId = playlistId.trim();
+  const supabase = getSupabaseAdmin();
+
+  // Guard against writing a partial/wrong order for the playlist (e.g. a
+  // stale client sending a list that doesn't match the actual video set).
+  const { data: existing, error: fetchError } = await supabase
+    .from("videos")
+    .select("id")
+    .eq("playlist_id", trimmedId)
+    .overrideTypes<Pick<VideoRow, "id">[], { merge: false }>();
+
+  if (fetchError) {
+    return { ok: false, error: `Failed to load videos: ${fetchError.message}` };
+  }
+
+  const existingIds = new Set((existing ?? []).map((v) => v.id));
+  const providedIds = new Set(orderedVideoIds);
+
+  if (
+    existingIds.size !== providedIds.size ||
+    [...existingIds].some((id) => !providedIds.has(id))
+  ) {
+    return { ok: false, error: "Video order does not match the playlist's current videos." };
+  }
+
+  const results = await Promise.all(
+    orderedVideoIds.map((id, index) =>
+      supabase.from("videos").update({ position: index }).eq("id", id),
+    ),
+  );
+
+  const failed = results.find((r) => r.error);
+  if (failed?.error) {
+    return { ok: false, error: `Failed to save video order: ${failed.error.message}` };
+  }
+
+  return { ok: true, data: undefined };
+}
+
+/**
  * Re-syncs a playlist's videos from YouTube: adds any videos found on
  * YouTube that aren't already stored, and backfills `duration` /
  * `uploaded_at` on existing rows only where those fields are currently
@@ -127,15 +202,17 @@ export async function resyncPlaylistVideos(playlistId: string): Promise<ActionRe
 
   const { data: existingVideos, error: fetchExistingError } = await supabase
     .from("videos")
-    .select("id, duration, uploaded_at")
+    .select("id, duration, uploaded_at, position")
     .eq("playlist_id", trimmedId)
-    .overrideTypes<Pick<VideoRow, "id" | "duration" | "uploaded_at">[], { merge: false }>();
+    .overrideTypes<Pick<VideoRow, "id" | "duration" | "uploaded_at" | "position">[], { merge: false }>();
 
   if (fetchExistingError) {
     return { ok: false, error: `Failed to load existing videos: ${fetchExistingError.message}` };
   }
 
   const existingById = new Map((existingVideos ?? []).map((v) => [v.id, v]));
+  let nextPosition =
+    (existingVideos ?? []).reduce((max, v) => Math.max(max, v.position), -1) + 1;
 
   const fetched = await fetchPlaylist(trimmedId);
   if (!fetched.ok) {
@@ -149,12 +226,16 @@ export async function resyncPlaylistVideos(playlistId: string): Promise<ActionRe
     const existing = existingById.get(v.id);
 
     if (!existing) {
+      // New videos found on YouTube are appended after existing videos,
+      // in the order YouTube returns them, so a re-sync never disturbs
+      // the admin's existing manual ordering of already-known videos.
       newRows.push({
         id: v.id,
         playlist_id: trimmedId,
         title: v.title,
         duration: v.duration,
         uploaded_at: v.uploadedAt,
+        position: nextPosition++,
       });
       continue;
     }

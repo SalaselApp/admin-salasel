@@ -95,12 +95,13 @@ export async function createPlaylist(
     return { ok: false, error: `Failed to save playlist: ${playlistError.message}` };
   }
 
-  const videoRows: VideoRow[] = videos.map((v) => ({
+  const videoRows: VideoRow[] = videos.map((v, index) => ({
     id: v.id,
     playlist_id: playlistId.trim(),
     title: v.title,
     duration: v.duration,
     uploaded_at: v.uploadedAt,
+    position: index,
   }));
 
   const { error: videosError } = await supabase.from("videos").upsert(videoRows);

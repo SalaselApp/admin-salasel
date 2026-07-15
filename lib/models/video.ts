@@ -9,6 +9,7 @@ export interface VideoRow {
   title: string;
   duration: number;
   uploaded_at: number;
+  position: number;
 }
 
 /**
@@ -20,6 +21,7 @@ export interface Video {
   title: string;
   duration: number;
   uploadedAt: number;
+  position: number;
 }
 
 export function rowToVideo(row: VideoRow): Video {
@@ -29,6 +31,7 @@ export function rowToVideo(row: VideoRow): Video {
     title: row.title,
     duration: row.duration,
     uploadedAt: row.uploaded_at,
+    position: row.position,
   };
 }
 
@@ -39,5 +42,6 @@ export function videoToRow(video: Video): VideoRow {
     title: video.title,
     duration: video.duration,
     uploaded_at: video.uploadedAt,
+    position: video.position,
   };
 }

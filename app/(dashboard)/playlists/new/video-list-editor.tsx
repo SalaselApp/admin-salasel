@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { DragDropProvider } from "@dnd-kit/react";
+import { move } from "@dnd-kit/helpers";
+import { useSortable } from "@dnd-kit/react/sortable";
 
 import type { FetchedVideo } from "@/lib/youtube/fetch";
 import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
@@ -26,9 +29,11 @@ function formatDuration(seconds: number): string {
 }
 
 /**
- * Per-video row: thumbnail, editable title, duration, and an
- * include/exclude checkbox controlling whether the video is saved with
- * the playlist.
+ * Per-video row: drag handle, thumbnail, editable title, duration, and
+ * an include/exclude checkbox controlling whether the video is saved
+ * with the playlist. Order (drag position) is tracked purely as the
+ * array order of the `videos` prop — the caller is responsible for
+ * persisting it (e.g. via `reorderVideos`) once a playlist exists.
  */
 export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
   const includedCount = videos.filter((v) => v.included).length;
@@ -48,34 +53,55 @@ export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
         </span>
       </div>
 
-      <div className="divide-y divide-gray-200 dark:divide-slate-700">
-        {videos.map((video) => (
-          <VideoRow
-            key={video.id}
-            video={video}
-            onChange={(patch) => updateVideo(video.id, patch)}
-          />
-        ))}
-      </div>
+      <DragDropProvider
+        onDragEnd={(event) => {
+          if (event.canceled) return;
+          onChange(move(videos, event));
+        }}
+      >
+        <div className="divide-y divide-gray-200 dark:divide-slate-700">
+          {videos.map((video, index) => (
+            <VideoRow
+              key={video.id}
+              video={video}
+              index={index}
+              onChange={(patch) => updateVideo(video.id, patch)}
+            />
+          ))}
+        </div>
+      </DragDropProvider>
     </div>
   );
 }
 
 function VideoRow({
   video,
+  index,
   onChange,
 }: {
   video: EditableVideo;
+  index: number;
   onChange: (patch: Partial<EditableVideo>) => void;
 }) {
   const [imageUrl, setImageUrl] = useState(videoThumbnailUrl(video.id));
+  const { ref, handleRef, isDragging } = useSortable({ id: video.id, index });
 
   return (
     <div
-      className={`grid grid-cols-[auto_auto_1fr_auto] items-center gap-x-4 p-4 transition-colors sm:px-6 ${
+      ref={ref}
+      className={`grid grid-cols-[auto_auto_auto_1fr_auto] items-center gap-x-4 p-4 transition-colors sm:px-6 ${
         video.included ? "" : "opacity-50"
-      }`}
+      } ${isDragging ? "opacity-40" : ""}`}
     >
+      <button
+        ref={handleRef}
+        type="button"
+        aria-label={`Drag to reorder "${video.title}"`}
+        className="cursor-grab touch-none text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
+      >
+        <span className="material-icons-round text-lg">drag_indicator</span>
+      </button>
+
       <input
         type="checkbox"
         checked={video.included}
