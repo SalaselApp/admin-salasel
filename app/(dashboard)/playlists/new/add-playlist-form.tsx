@@ -7,66 +7,18 @@ import Image from "next/image";
 import { fetchPlaylistPreview, createPlaylist } from "@/lib/actions/playlists";
 import type { FetchedPlaylist, FetchedVideo } from "@/lib/youtube/fetch";
 import { videoThumbnailUrl } from "@/lib/youtube/thumbnail";
-import {
-  Categories,
-  CATEGORY_LABELS,
-  Classes,
-  CLASS_LABELS,
-  ContentTypes,
-  CONTENT_TYPE_LABELS,
-  LANGUAGES,
-  PresentationStyles,
-  PRESENTATION_STYLE_LABELS,
-  type Language,
-} from "@/types";
 import { PlaylistThumbnail } from "./playlist-thumbnail";
 import { VideoListEditor, type EditableVideo } from "./video-list-editor";
-
-const CATEGORY_OPTIONS = Object.values(Categories).filter(
-  (v): v is Categories => typeof v === "number",
-);
-const CLASS_OPTIONS = Object.values(Classes).filter(
-  (v): v is Classes => typeof v === "number",
-);
-const CONTENT_TYPE_OPTIONS = Object.values(ContentTypes).filter(
-  (v): v is ContentTypes => typeof v === "number",
-);
-const PRESENTATION_STYLE_OPTIONS = Object.values(PresentationStyles).filter(
-  (v): v is PresentationStyles => typeof v === "number",
-);
-
-interface ManualFieldsState {
-  description: string;
-  participants: string; // comma-separated in the UI, split on submit
-  language: Language;
-  type: ContentTypes;
-  style: PresentationStyles;
-  categories: Set<Categories>;
-  classes: Set<Classes>;
-}
-
-function initialManualFields(): ManualFieldsState {
-  return {
-    description: "",
-    participants: "",
-    language: "ar",
-    type: ContentTypes.Educational,
-    style: PresentationStyles.Narration,
-    categories: new Set(),
-    classes: new Set(),
-  };
-}
+import {
+  PlaylistFields,
+  emptyManualFields,
+  inputClasses,
+  labelClasses,
+  type ManualFieldsState,
+} from "../playlist-fields";
 
 function toEditableVideos(videos: FetchedVideo[]): EditableVideo[] {
   return videos.map((v) => ({ ...v, included: true }));
-}
-
-function inputClasses(): string {
-  return "rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100";
-}
-
-function labelClasses(): string {
-  return "text-sm font-medium text-gray-700 dark:text-slate-300";
 }
 
 function RequiredMark() {
@@ -85,7 +37,7 @@ export function AddPlaylistForm() {
   const [name, setName] = useState("");
   const [thumbnailId, setThumbnailId] = useState("");
   const [videos, setVideos] = useState<EditableVideo[]>([]);
-  const [manual, setManual] = useState<ManualFieldsState>(initialManualFields);
+  const [manual, setManual] = useState<ManualFieldsState>(emptyManualFields);
   const [error, setError] = useState<string | null>(null);
   const [isFetching, startFetch] = useTransition();
   const [isSaving, startSave] = useTransition();
@@ -104,16 +56,6 @@ export function AddPlaylistForm() {
       setThumbnailId(result.data.thumbnailId);
       setVideos(toEditableVideos(result.data.videos));
     });
-  }
-
-  function toggleSetValue<T>(set: Set<T>, value: T): Set<T> {
-    const next = new Set(set);
-    if (next.has(value)) {
-      next.delete(value);
-    } else {
-      next.add(value);
-    }
-    return next;
   }
 
   function handleSave() {
@@ -272,155 +214,7 @@ export function AddPlaylistForm() {
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClasses()}>Description</label>
-              <textarea
-                value={manual.description}
-                onChange={(e) =>
-                  setManual((m) => ({ ...m, description: e.target.value }))
-                }
-                rows={3}
-                className={inputClasses()}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className={labelClasses()}>
-                Participants (comma-separated)
-              </label>
-              <input
-                type="text"
-                value={manual.participants}
-                onChange={(e) =>
-                  setManual((m) => ({ ...m, participants: e.target.value }))
-                }
-                className={inputClasses()}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className={labelClasses()}>
-                  Language
-                  <RequiredMark />
-                </label>
-                <select
-                  value={manual.language}
-                  onChange={(e) =>
-                    setManual((m) => ({
-                      ...m,
-                      language: e.target.value as Language,
-                    }))
-                  }
-                  className={inputClasses()}
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>
-                      {lang}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className={labelClasses()}>
-                  Content type
-                  <RequiredMark />
-                </label>
-                <select
-                  value={manual.type}
-                  onChange={(e) =>
-                    setManual((m) => ({
-                      ...m,
-                      type: Number(e.target.value) as ContentTypes,
-                    }))
-                  }
-                  className={inputClasses()}
-                >
-                  {CONTENT_TYPE_OPTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {CONTENT_TYPE_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className={labelClasses()}>
-                  Presentation style
-                  <RequiredMark />
-                </label>
-                <select
-                  value={manual.style}
-                  onChange={(e) =>
-                    setManual((m) => ({
-                      ...m,
-                      style: Number(e.target.value) as PresentationStyles,
-                    }))
-                  }
-                  className={inputClasses()}
-                >
-                  {PRESENTATION_STYLE_OPTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {PRESENTATION_STYLE_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <fieldset className="flex flex-col gap-1.5">
-              <legend className={labelClasses()}>
-                Categories
-                <RequiredMark />
-              </legend>
-              <div className="flex flex-wrap gap-3">
-                {CATEGORY_OPTIONS.map((value) => (
-                  <label
-                    key={value}
-                    className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={manual.categories.has(value)}
-                      onChange={() =>
-                        setManual((m) => ({
-                          ...m,
-                          categories: toggleSetValue(m.categories, value),
-                        }))
-                      }
-                      className="accent-primary"
-                    />
-                    {CATEGORY_LABELS[value]}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="flex flex-col gap-1.5">
-              <legend className={labelClasses()}>Classes</legend>
-              <div className="flex flex-wrap gap-3">
-                {CLASS_OPTIONS.map((value) => (
-                  <label
-                    key={value}
-                    className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-slate-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={manual.classes.has(value)}
-                      onChange={() =>
-                        setManual((m) => ({
-                          ...m,
-                          classes: toggleSetValue(m.classes, value),
-                        }))
-                      }
-                      className="accent-primary"
-                    />
-                    {CLASS_LABELS[value]}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <PlaylistFields value={manual} onChange={setManual} />
           </div>
         </div>
 
