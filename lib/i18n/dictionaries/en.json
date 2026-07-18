@@ -1,0 +1,107 @@
+{
+  "appTitle": "Salasel Admin",
+  "appDescription": "Content management for the Salasel platform.",
+  "signOut": "Sign out",
+  "languageSwitcherLabel": "Select language",
+
+  "login": {
+    "passwordLabel": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "incorrectPassword": "Incorrect password.",
+    "tooManyAttempts": "Too many attempts. Try again in a minute."
+  },
+
+  "dashboard": {
+    "heading": "Playlists",
+    "addPlaylist": "Add playlist",
+    "searchPlaceholder": "Search by name",
+    "filterByLanguage": "Filter by language",
+    "filterByContentType": "Filter by content type",
+    "allLanguages": "All languages",
+    "allTypes": "All types",
+    "clear": "Clear",
+    "emptyNoPlaylists": "No playlists yet. Add one to get started.",
+    "emptyNoMatches": "No playlists match your filters.",
+    "videoCount": "{count} video",
+    "videoCountPlural": "{count} videos"
+  },
+
+  "playlist": {
+    "backToPlaylists": "Back to playlists",
+    "breadcrumbPlaylists": "Playlists",
+    "youtubePlaylistId": "YouTube playlist ID",
+    "name": "Name",
+    "thumbnail": "Thumbnail",
+    "pickFromVideos": "Pick from playlist videos",
+    "description": "Description",
+    "participants": "Participants (comma-separated)",
+    "language": "Language",
+    "contentType": "Content type",
+    "presentationStyle": "Presentation style",
+    "categories": "Categories",
+    "classes": "Classes",
+    "saveChanges": "Save changes",
+    "saving": "Saving…",
+    "savedNotice": "Changes saved.",
+    "deletePlaylist": "Delete playlist",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete \"{name}\" and all its videos? This cannot be undone.",
+    "nameRequired": "Name is required.",
+    "categoryRequired": "Select at least one category."
+  },
+
+  "add": {
+    "heading": "Add playlist",
+    "urlOrIdLabel": "YouTube playlist URL or ID",
+    "urlPlaceholder": "https://www.youtube.com/playlist?list=...",
+    "fetchFromYoutube": "Fetch from YouTube",
+    "fetching": "Fetching…",
+    "foundVideos": "Found {count} video. Review and fill in the details below.",
+    "foundVideosPlural": "Found {count} videos. Review and fill in the details below.",
+    "fetchingDetails": "Fetching video details…",
+    "savePlaylist": "Save playlist",
+    "savingDetails": "Fetching details…",
+    "back": "Back",
+    "atLeastOneCategory": "Select at least one category.",
+    "atLeastOneVideo": "At least one video must be included."
+  },
+
+  "videos": {
+    "heading": "Videos",
+    "countIncluded": "{included} / {total} included",
+    "empty": "This playlist has no videos.",
+    "showFewer": "Show fewer",
+    "loadAll": "Load all ({count} more)",
+    "loadMore": "Load more ({count})",
+    "dragToReorder": "Drag to reorder \"{title}\"",
+    "include": "Include \"{title}\"",
+    "remove": "Remove \"{title}\"",
+    "removeConfirm": "Remove \"{title}\" from this playlist?",
+    "useAsThumbnail": "Use \"{title}\" as thumbnail",
+    "durationPlaceholder": "--:--"
+  },
+
+  "contentTypes": {
+    "0": "Educational",
+    "1": "Awareness",
+    "2": "Purification"
+  },
+  "presentationStyles": {
+    "0": "Narration",
+    "1": "Lecture",
+    "2": "Podcast",
+    "3": "Story"
+  },
+  "categoryLabels": {
+    "0": "Nature",
+    "1": "Self",
+    "2": "Religion"
+  },
+  "classLabels": {
+    "0": "Kids",
+    "1": "Female",
+    "2": "Married",
+    "3": "Parents"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "appTitle": "إدارة سلاسل",
+  "appDescription": "إدارة محتوى منصة سلاسل.",
+  "signOut": "تسجيل الخروج",
+  "languageSwitcherLabel": "اختيار اللغة",
+
+  "login": {
+    "passwordLabel": "كلمة المرور",
+    "signIn": "تسجيل الدخول",
+    "signingIn": "جارٍ تسجيل الدخول…",
+    "incorrectPassword": "كلمة المرور غير صحيحة.",
+    "tooManyAttempts": "محاولات كثيرة. حاول مرة أخرى بعد دقيقة."
+  },
+
+  "dashboard": {
+    "heading": "السلاسل",
+    "addPlaylist": "إضافة سلسلة",
+    "searchPlaceholder": "ابحث بالاسم",
+    "filterByLanguage": "تصفية حسب اللغة",
+    "filterByContentType": "تصفية حسب نوع المحتوى",
+    "allLanguages": "كل اللغات",
+    "allTypes": "كل الأنواع",
+    "clear": "مسح",
+    "emptyNoPlaylists": "لا توجد سلاسل بعد. أضف واحدة للبدء.",
+    "emptyNoMatches": "لا توجد سلاسل تطابق التصفية.",
+    "videoCount": "{count} مقطع",
+    "videoCountPlural": "{count} مقطع"
+  },
+
+  "playlist": {
+    "backToPlaylists": "العودة إلى السلاسل",
+    "breadcrumbPlaylists": "السلاسل",
+    "youtubePlaylistId": "معرّف سلسلة يوتيوب",
+    "name": "الاسم",
+    "thumbnail": "الصورة المصغّرة",
+    "pickFromVideos": "اختر من مقاطع السلسلة",
+    "description": "الوصف",
+    "participants": "المشاركون (مفصولون بفواصل)",
+    "language": "اللغة",
+    "contentType": "نوع المحتوى",
+    "presentationStyle": "الأسلوب",
+    "categories": "التصنيفات",
+    "classes": "الفئات",
+    "saveChanges": "حفظ التغييرات",
+    "saving": "جارٍ الحفظ…",
+    "savedNotice": "تم حفظ التغييرات.",
+    "deletePlaylist": "حذف السلسلة",
+    "deleting": "جارٍ الحذف…",
+    "deleteConfirm": "حذف «{name}» وكل مقاطعها؟ لا يمكن التراجع عن هذا.",
+    "nameRequired": "الاسم مطلوب.",
+    "categoryRequired": "اختر تصنيفًا واحدًا على الأقل."
+  },
+
+  "add": {
+    "heading": "إضافة سلسلة",
+    "urlOrIdLabel": "رابط أو معرّف سلسلة يوتيوب",
+    "urlPlaceholder": "https://www.youtube.com/playlist?list=...",
+    "fetchFromYoutube": "جلب من يوتيوب",
+    "fetching": "جارٍ الجلب…",
+    "foundVideos": "تم العثور على {count} مقطع. راجع واملأ التفاصيل أدناه.",
+    "foundVideosPlural": "تم العثور على {count} مقطع. راجع واملأ التفاصيل أدناه.",
+    "fetchingDetails": "جارٍ جلب تفاصيل المقاطع…",
+    "savePlaylist": "حفظ السلسلة",
+    "savingDetails": "جارٍ جلب التفاصيل…",
+    "back": "رجوع",
+    "atLeastOneCategory": "اختر تصنيفًا واحدًا على الأقل.",
+    "atLeastOneVideo": "يجب تضمين مقطع واحد على الأقل."
+  },
+
+  "videos": {
+    "heading": "المقاطع",
+    "countIncluded": "{included} / {total} مُضمَّن",
+    "empty": "لا توجد مقاطع في هذه السلسلة.",
+    "showFewer": "عرض أقل",
+    "loadAll": "عرض الكل ({count} إضافية)",
+    "loadMore": "عرض المزيد ({count})",
+    "dragToReorder": "اسحب لإعادة ترتيب «{title}»",
+    "include": "تضمين «{title}»",
+    "remove": "إزالة «{title}»",
+    "removeConfirm": "إزالة «{title}» من هذه السلسلة؟",
+    "useAsThumbnail": "استخدام «{title}» كصورة مصغّرة",
+    "durationPlaceholder": "--:--"
+  },
+
+  "contentTypes": {
+    "0": "تعليمي",
+    "1": "توعوي",
+    "2": "تزكوي"
+  },
+  "presentationStyles": {
+    "0": "سرد",
+    "1": "محاضرة",
+    "2": "إذاعة",
+    "3": "قصة"
+  },
+  "categoryLabels": {
+    "0": "فطرة",
+    "1": "نفس",
+    "2": "دين"
+  },
+  "classLabels": {
+    "0": "أطفال",
+    "1": "إناث",
+    "2": "متزوجين",
+    "3": "آباء"
+  }
+}
