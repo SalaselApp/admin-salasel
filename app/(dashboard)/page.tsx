@@ -1,18 +1,10 @@
-import Link from "next/link";
+import { listPlaylists } from "@/lib/queries/playlists";
+import { PlaylistList } from "./playlist-list";
 
-export default function DashboardPage() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4">
-      <p className="text-gray-500 dark:text-slate-400">
-        Playlist dashboard coming soon.
-      </p>
-      <Link
-        href="/playlists/new"
-        className="flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-      >
-        <span className="material-icons-round text-base">add</span>
-        Add playlist
-      </Link>
-    </div>
-  );
+// The dashboard reflects live DB state; don't cache between requests.
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const playlists = await listPlaylists();
+  return <PlaylistList playlists={playlists} />;
 }
