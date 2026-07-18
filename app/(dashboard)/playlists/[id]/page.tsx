@@ -20,6 +20,14 @@ export default async function EditPlaylistPage({
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+      <Link
+        href="/"
+        className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-gray-500 transition-colors hover:text-primary dark:text-slate-400"
+      >
+        <span className="material-icons-round text-base">arrow_back</span>
+        Back to playlists
+      </Link>
+
       <div className="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
         <Link href="/" className="hover:text-primary">
           Playlists

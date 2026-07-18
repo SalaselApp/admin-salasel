@@ -204,14 +204,6 @@ export function EditPlaylistForm({
           </button>
           <button
             type="button"
-            onClick={() => router.push("/")}
-            disabled={isSaving || isDeleting}
-            className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            Back
-          </button>
-          <button
-            type="button"
             onClick={handleDelete}
             disabled={isSaving || isDeleting}
             className="ml-auto flex items-center gap-1.5 rounded-full border border-red-300 px-5 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/50"
