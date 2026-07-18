@@ -66,47 +66,63 @@ the running task list / status on top of that spec.
   Docker Postgres instance) — `playlists`/`videos` tables exist, RLS
   policies already correctly restrict writes to `service_role` only.
 
-## Next up (in the order the user wants them)
+### Drag-and-drop video reordering — DONE
 
-### 1. Drag-and-drop video reordering
+Confirmed with the user: the public site DOES respect video order (that's
+the point), reordering is admin-only.
 
-The user wants to reorder video cards by dragging, on the manage-videos
-screen (and/or the add-playlist review screen).
+- New migration `20260715000000_add_video_position.sql` adds a
+  `position int not null default 0` column to `videos` + a
+  `(playlist_id, position)` index, backfilled from `uploaded_at` order.
+  Applied to: admin local DB, public Salasel local DB, AND public Salasel
+  **prod** (via `supabase db push --linked` after a `migration repair`
+  since prod's tables predated migration tracking). Copied verbatim into
+  the public repo's `supabase/migrations/` too.
+- Public Salasel app updated (by a separate agent working in that repo):
+  `VideoRow`/`CalculatedVideo` gained `position`, `getVideos` now
+  `.order('position')` instead of `.order('uploaded_at')`, and `bin/seed.js`
+  assigns sequential positions. Verified `tsc`/build clean there.
+- Admin side: `VideoRow`/`Video` model gained `position`; `createPlaylist`
+  writes `position` = array index; `addVideo` appends at max+1;
+  `resyncPlaylistVideos` appends new videos after existing ones (never
+  disturbs manual order); new `reorderVideos(playlistId, orderedVideoIds)`
+  action (validates the id set matches, writes positions, no derived
+  recompute). Drag UI via `@dnd-kit/react` + `@dnd-kit/helpers` (current
+  package, NOT the older `@dnd-kit/core`+`sortable`+`utilities`) —
+  `DragDropProvider` + `useSortable` with a drag handle. Lives in both the
+  add-playlist review list (`video-list-editor.tsx`, local-only pre-save)
+  and the manage-videos screen (persists immediately). Smoke-tested the
+  reorder round-trip against the live dev DB.
 
-**Open question / likely blocker**: the current `videos` table has no
-explicit ordering column (`id`, `playlist_id`, `title`, `duration`,
-`uploaded_at` only — see `supabase/migrations/20260623000000_init_schema.sql`).
-Today, ordering is implicit (insertion order / `uploaded_at`). To persist a
-custom drag order you'll likely need:
-- A new `position` (or `sort_order`) integer column on `videos`, added via
-  a **new migration** (don't edit the existing one) — and this migration
-  needs to be applied to the public Salasel repo too if the public site
-  ever displays videos in playlist order (check whether it currently
-  relies on `uploaded_at` ordering or insertion order before assuming this
-  is purely additive).
-- Confirm with the user whether the public site cares about this order at
-  all, or if this is admin-only (e.g. just for readability while editing)
-  before adding the column — flag it, don't silently assume.
-- A drag-and-drop library: check via context7 (no existing drag-drop
-  dependency in this repo yet). `@dnd-kit` is the modern, actively
-  maintained standard for React — verify current API via context7 rather
-  than assuming.
-- A server action `reorderVideos(playlistId, orderedVideoIds: string[])`
-  that writes the new `position` values, likely without needing a
-  derived-field recompute (order doesn't affect `video_count`/`duration`/
-  dates) — but confirm.
+### Playlist dashboard — DONE
 
-### 2. Playlist dashboard
+`app/(dashboard)/page.tsx` is now the real dashboard: server component
+calling `listPlaylists()` (`lib/queries/playlists.ts`), rendering
+`playlist-list.tsx` (client) with case-insensitive name search + cards
+(thumbnail, name, description, language/type/style/duration metadata,
+video count badge). Cards link to `/playlists/[id]`. "Add playlist" button
+present, links to `/playlists/new`.
 
-Currently `app/(dashboard)/page.tsx` is just a placeholder with an
-"Add playlist" button. Needs to become the real dashboard per the steering
-doc: list all playlists (name, language, type, video_count, thumbnail),
-case-insensitive search by name, links into edit/manage-videos screens.
-Match the card style already established in the add-playlist screen /
-the public app's `PlaylistCard.tsx` (thumbnail, title, description,
-metadata row) — but this is an *admin* list view, not the public
-consumption view, so it probably wants edit/delete affordances instead of
-progress bars/bookmarks.
+### Edit playlist + manage videos — DONE
+
+- `/playlists/[id]` (`app/(dashboard)/playlists/[id]/`): server page loads
+  playlist + videos via `getPlaylistWithVideos`, renders
+  `edit-playlist-form.tsx`. Manual fields extracted into a shared
+  `playlist-fields.tsx` (`PlaylistFields`) reused by both add and edit, so
+  they stay in sync. `id` is shown read-only. Save calls
+  `updatePlaylistMeta`. Delete button (confirm dialog) calls
+  `deletePlaylist` → redirect to dashboard.
+- `manage-videos.tsx`: drag reorder (persists via `reorderVideos`), inline
+  title edit on blur/Enter (`updateVideoTitle`), remove with confirm
+  (`removeVideo`), thumbnail picker in the edit form updates
+  `thumbnail_id`. Shows duration + upload date per row.
+
+### Still open
+
+- **Re-sync from YouTube button**: the `resyncPlaylistVideos` action exists
+  and now handles positions, but there's no button wired into the
+  manage-videos UI yet. Quick add.
+- **i18n (Arabic default)** — see below, still the big remaining task.
 
 ### 3. Remaining flows from the original plan
 
