@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchPlaylist } from "@/lib/youtube/fetch";
 import { recomputeDerivedFields } from "@/lib/derived";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import {
   playlistManualInputToRow,
   type PlaylistManualInput,
@@ -112,6 +113,9 @@ export async function createPlaylist(
 
   await recomputeDerivedFields(playlistId.trim());
 
+  // New playlist + videos both affect the public site's caches.
+  await revalidatePublicContent();
+
   return { ok: true, data: undefined };
 }
 
@@ -157,6 +161,8 @@ export async function updatePlaylistMeta(
     return { ok: false, error: `Failed to update playlist: ${error.message}` };
   }
 
+  await revalidatePublicContent("playlists");
+
   return { ok: true, data: undefined };
 }
 
@@ -177,6 +183,9 @@ export async function deletePlaylist(playlistId: string): Promise<ActionResult> 
   if (error) {
     return { ok: false, error: `Failed to delete playlist: ${error.message}` };
   }
+
+  // Deleting cascades to videos, so both caches are affected.
+  await revalidatePublicContent();
 
   return { ok: true, data: undefined };
 }

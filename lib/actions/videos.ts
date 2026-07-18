@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { fetchPlaylist, fetchVideo } from "@/lib/youtube/fetch";
 import { recomputeDerivedFields } from "@/lib/derived";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import type { VideoRow } from "@/lib/models/video";
 import type { ActionResult } from "./playlists";
 
@@ -61,6 +62,7 @@ export async function addVideo(
   }
 
   await recomputeDerivedFields(playlistId.trim());
+  await revalidatePublicContent();
 
   return { ok: true, data: undefined };
 }
@@ -91,6 +93,8 @@ export async function updateVideoTitle(
     return { ok: false, error: `Failed to update video: ${error.message}` };
   }
 
+  await revalidatePublicContent("videos");
+
   return { ok: true, data: undefined };
 }
 
@@ -119,6 +123,7 @@ export async function removeVideo(
   }
 
   await recomputeDerivedFields(playlistId.trim());
+  await revalidatePublicContent();
 
   return { ok: true, data: undefined };
 }
@@ -177,6 +182,8 @@ export async function reorderVideos(
   if (failed?.error) {
     return { ok: false, error: `Failed to save video order: ${failed.error.message}` };
   }
+
+  await revalidatePublicContent("videos");
 
   return { ok: true, data: undefined };
 }
@@ -264,6 +271,7 @@ export async function resyncPlaylistVideos(playlistId: string): Promise<ActionRe
   }
 
   await recomputeDerivedFields(trimmedId);
+  await revalidatePublicContent();
 
   return { ok: true, data: undefined };
 }
