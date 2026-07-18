@@ -76,7 +76,11 @@ export async function setSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(getCookieName(), token, {
     httpOnly: true,
-    secure: true,
+    // `secure` cookies are only sent over HTTPS. Local dev runs on plain
+    // http://localhost, so forcing secure there means the browser never
+    // stores/sends the cookie — which causes a login→proxy→login redirect
+    // loop. Enable it only outside development (real deployments use HTTPS).
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * getSessionDurationDays(),
