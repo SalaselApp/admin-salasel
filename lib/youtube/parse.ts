@@ -52,6 +52,23 @@ const ABSOLUTE_DATE_PATTERN =
   /[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}/;
 
 /**
+ * Parses a YouTube duration badge string into seconds. Handles the
+ * "H:MM:SS" / "M:SS" / "S" shapes YouTube uses on playlist listing
+ * thumbnails (e.g. "1:43:54", "12:07", "45"). Returns 0 if the text is
+ * missing or unparseable — 0 is the "missing" sentinel used elsewhere.
+ */
+export function parseDurationText(text: string | null | undefined): number {
+  if (!text) return 0;
+  const trimmed = text.trim();
+  if (!/^\d+(:\d{1,2}){0,2}$/.test(trimmed)) return 0;
+
+  const parts = trimmed.split(":").map((p) => Number(p));
+  if (parts.some((n) => Number.isNaN(n))) return 0;
+
+  return parts.reduce((acc, n) => acc * 60 + n, 0);
+}
+
+/**
  * Parses a YouTube video page's `dateText` (e.g. "Jan 1, 2020",
  * "Premiered Jan 1, 2020") into a unix epoch in seconds. Returns 0 if the
  * text is missing or unparseable — 0 is the sentinel used elsewhere for

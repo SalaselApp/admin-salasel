@@ -8,7 +8,7 @@ type ReelItem = InstanceType<typeof YTNodes.ReelItem>;
 type ShortsLockupView = InstanceType<typeof YTNodes.ShortsLockupView>;
 type PlaylistItem = LockupView | PlaylistVideo | ReelItem | ShortsLockupView;
 
-import { extractPlaylistId, parseUploadedAt } from "./parse";
+import { extractPlaylistId, parseDurationText, parseUploadedAt } from "./parse";
 
 /**
  * Server-side YouTube metadata fetching.
@@ -65,6 +65,29 @@ function getClient(): Promise<Innertube> {
   return cachedClient;
 }
 
+/**
+ * Pulls the duration badge (e.g. "1:43:54") off a LockupView's thumbnail
+ * bottom-overlay, if present. Modern playlist listings carry the duration
+ * here, so we can read it from the single listing request instead of a
+ * per-video detail fetch — the per-video path is what gets rate-limited
+ * by YouTube from datacenter IPs (e.g. Netlify), which is why durations
+ * came back as 0 in prod but not in local dev.
+ */
+function extractLockupDuration(item: LockupView): number {
+  const content = item.content_image;
+  if (!(content instanceof YTNodes.ThumbnailView)) return 0;
+  const overlays = content.overlays ?? [];
+  for (const overlay of overlays) {
+    if (overlay instanceof YTNodes.ThumbnailBottomOverlayView) {
+      for (const badge of overlay.badges ?? []) {
+        const seconds = parseDurationText(badge.text);
+        if (seconds > 0) return seconds;
+      }
+    }
+  }
+  return 0;
+}
+
 /** Extracts { id, title, duration } from a playlist listing item. Items
  * can be the modern LockupView shape or the legacy PlaylistVideo shape;
  * anything else (e.g. shorts) is skipped. */
@@ -76,7 +99,9 @@ function parseListingItem(
     return {
       id: item.content_id,
       title: item.metadata?.title?.text ?? "Untitled",
-      duration: 0, // backfilled from the per-video fetch below
+      // Read duration from the listing overlay; the per-video fetch still
+      // backfills it as a fallback for any item missing the badge.
+      duration: extractLockupDuration(item),
     };
   }
 
