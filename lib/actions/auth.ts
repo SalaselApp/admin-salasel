@@ -13,9 +13,14 @@ import {
   isLockedOut,
   recordFailedAttempt,
 } from "@/lib/auth/rate-limit";
+import { getLocaleConfig } from "@/lib/i18n/config";
+import { localeHref } from "@/lib/i18n/navigation";
+
+export type LoginErrorCode = "incorrect" | "locked";
 
 export interface LoginState {
-  error?: string;
+  /** Error code translated by the client form, if any. */
+  errorCode?: LoginErrorCode;
 }
 
 function constantTimeEquals(a: string, b: string): boolean {
@@ -46,9 +51,10 @@ export async function login(
   formData: FormData,
 ): Promise<LoginState> {
   const clientKey = await getClientKey();
+  const locale = getLocaleConfig(String(formData.get("locale") ?? "")).code;
 
   if (isLockedOut(clientKey)) {
-    return { error: "Too many attempts. Try again in a minute." };
+    return { errorCode: "locked" };
   }
 
   const password = formData.get("password");
@@ -63,15 +69,16 @@ export async function login(
     !constantTimeEquals(password, adminPassword)
   ) {
     recordFailedAttempt(clientKey);
-    return { error: "Incorrect password." };
+    return { errorCode: "incorrect" };
   }
 
   clearAttempts(clientKey);
   await setSessionCookie();
-  redirect("/");
+  redirect(localeHref(locale, "/"));
 }
 
-export async function logout(): Promise<void> {
+export async function logout(formData: FormData): Promise<void> {
+  const locale = getLocaleConfig(String(formData.get("locale") ?? "")).code;
   await clearSessionCookie();
-  redirect("/login");
+  redirect(localeHref(locale, "/login"));
 }
