@@ -6,10 +6,17 @@ import Image from "next/image";
 
 import type { Playlist } from "@/lib/models/playlist";
 import {
+  ContentTypes,
   CONTENT_TYPE_LABELS,
+  LANGUAGES,
   PRESENTATION_STYLE_LABELS,
+  type Language,
 } from "@/types";
 import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
+
+const CONTENT_TYPE_OPTIONS = Object.values(ContentTypes).filter(
+  (v): v is ContentTypes => typeof v === "number",
+);
 
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "0m";
@@ -21,12 +28,26 @@ function formatDuration(seconds: number): string {
 
 export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
   const [query, setQuery] = useState("");
+  const [language, setLanguage] = useState<Language | "all">("all");
+  const [type, setType] = useState<ContentTypes | "all">("all");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return playlists;
-    return playlists.filter((p) => p.name.toLowerCase().includes(q));
-  }, [playlists, query]);
+    return playlists.filter((p) => {
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      if (language !== "all" && p.language !== language) return false;
+      if (type !== "all" && p.type !== type) return false;
+      return true;
+    });
+  }, [playlists, query, language, type]);
+
+  const hasActiveFilters = query.trim() !== "" || language !== "all" || type !== "all";
+
+  function clearFilters() {
+    setQuery("");
+    setLanguage("all");
+    setType("all");
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
@@ -43,24 +64,67 @@ export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
         </Link>
       </div>
 
-      <div className="relative mb-6">
-        <span className="material-icons-round pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-gray-400 dark:text-slate-500">
-          search
-        </span>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name"
-          className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-        />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <span className="material-icons-round pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-gray-400 dark:text-slate-500">
+            search
+          </span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name"
+            className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          />
+        </div>
+
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as Language | "all")}
+          aria-label="Filter by language"
+          className="rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        >
+          <option value="all">All languages</option>
+          {LANGUAGES.map((lang) => (
+            <option key={lang} value={lang}>
+              {lang.toUpperCase()}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={type}
+          onChange={(e) =>
+            setType(e.target.value === "all" ? "all" : (Number(e.target.value) as ContentTypes))
+          }
+          aria-label="Filter by content type"
+          className="rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        >
+          <option value="all">All types</option>
+          {CONTENT_TYPE_OPTIONS.map((v) => (
+            <option key={v} value={v}>
+              {CONTENT_TYPE_LABELS[v]}
+            </option>
+          ))}
+        </select>
+
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex items-center gap-1 rounded-full px-3 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:text-primary dark:text-slate-400"
+          >
+            <span className="material-icons-round text-base">close</span>
+            Clear
+          </button>
+        )}
       </div>
 
       {filtered.length === 0 ? (
         <p className="py-16 text-center text-gray-500 dark:text-slate-400">
           {playlists.length === 0
             ? "No playlists yet. Add one to get started."
-            : "No playlists match your search."}
+            : "No playlists match your filters."}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
