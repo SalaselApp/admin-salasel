@@ -114,10 +114,19 @@ async function fetchVideoDetail(
 }
 
 /**
- * Fetches a playlist's metadata and full video list from YouTube.
- * Accepts either a playlist URL or a bare playlist ID.
+ * Fetches a playlist's metadata and video list from YouTube using ONLY
+ * the playlist listing (a single request) — no per-video detail fetches.
+ * This is fast and stays well within serverless function timeouts even
+ * for large playlists.
+ *
+ * The tradeoff: the listing doesn't carry `uploadedAt` (and, for some
+ * item shapes, not `duration` either), so those come back as 0 here. The
+ * caller is expected to backfill them by calling `fetchVideoDetails` in
+ * batches (see the add-playlist flow), which keeps each request short
+ * instead of doing all N per-video fetches in one long request that
+ * would time out on hosts like Netlify (10s sync function limit).
  */
-export async function fetchPlaylist(
+export async function fetchPlaylistListing(
   urlOrId: string,
 ): Promise<FetchResult<FetchedPlaylist>> {
   const playlistId = extractPlaylistId(urlOrId);
@@ -146,16 +155,12 @@ export async function fetchPlaylist(
   for (const item of items) {
     const parsed = parseListingItem(item);
     if (!parsed) continue;
-
-    const detail = await fetchVideoDetail(parsed.id);
     videos.push({
       id: parsed.id,
       title: parsed.title,
-      duration: parsed.duration || detail?.duration || 0,
-      uploadedAt: detail?.uploadedAt ?? 0,
+      duration: parsed.duration || 0,
+      uploadedAt: 0, // backfilled via fetchVideoDetails
     });
-
-    await delay(PER_VIDEO_FETCH_DELAY_MS);
   }
 
   // youtubei.js's Playlist.info doesn't expose a dedicated thumbnail
@@ -175,6 +180,79 @@ export async function fetchPlaylist(
       thumbnailId,
       videos,
     },
+  };
+}
+
+export interface VideoDetail {
+  id: string;
+  duration: number;
+  uploadedAt: number;
+}
+
+/**
+ * Fetches `uploadedAt` (and duration, as a fallback) for a batch of
+ * video IDs, sequentially with a small delay between each to avoid
+ * YouTube rate-limiting. Kept small (the caller passes a slice, e.g. 10
+ * IDs) so each invocation stays under serverless timeouts. Videos whose
+ * detail fetch fails come back with 0s rather than failing the batch.
+ */
+export async function fetchVideoDetails(
+  videoIds: string[],
+): Promise<FetchResult<VideoDetail[]>> {
+  if (!Array.isArray(videoIds)) {
+    return { ok: false, error: "Invalid video IDs." };
+  }
+
+  const results: VideoDetail[] = [];
+
+  for (let i = 0; i < videoIds.length; i++) {
+    const id = videoIds[i];
+    const detail = await fetchVideoDetail(id);
+    results.push({
+      id,
+      duration: detail?.duration ?? 0,
+      uploadedAt: detail?.uploadedAt ?? 0,
+    });
+    // Delay between requests (but not after the last one in the batch).
+    if (i < videoIds.length - 1) {
+      await delay(PER_VIDEO_FETCH_DELAY_MS);
+    }
+  }
+
+  return { ok: true, data: results };
+}
+
+/**
+ * Fetches a playlist's metadata and full video list from YouTube,
+ * including per-video `uploadedAt`/`duration` details in one call.
+ *
+ * NOTE: this does N sequential per-video fetches with a delay between
+ * each, so it can run for tens of seconds on large playlists — fine for
+ * server-side/background use (e.g. re-sync), but NOT safe to call from a
+ * request that has a short timeout. The add-playlist flow uses
+ * `fetchPlaylistListing` + `fetchVideoDetails` (batched) instead.
+ */
+export async function fetchPlaylist(
+  urlOrId: string,
+): Promise<FetchResult<FetchedPlaylist>> {
+  const listing = await fetchPlaylistListing(urlOrId);
+  if (!listing.ok) return listing;
+
+  const videos: FetchedVideo[] = [];
+  for (const v of listing.data.videos) {
+    const detail = await fetchVideoDetail(v.id);
+    videos.push({
+      id: v.id,
+      title: v.title,
+      duration: v.duration || detail?.duration || 0,
+      uploadedAt: detail?.uploadedAt ?? 0,
+    });
+    await delay(PER_VIDEO_FETCH_DELAY_MS);
+  }
+
+  return {
+    ok: true,
+    data: { ...listing.data, videos },
   };
 }
 

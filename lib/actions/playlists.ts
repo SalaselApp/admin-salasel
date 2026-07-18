@@ -2,7 +2,10 @@
 
 import { requireSession } from "@/lib/auth/session";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { fetchPlaylist } from "@/lib/youtube/fetch";
+import {
+  fetchPlaylistListing,
+  fetchVideoDetails,
+} from "@/lib/youtube/fetch";
 import { recomputeDerivedFields } from "@/lib/derived";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import {
@@ -17,19 +20,48 @@ export type ActionResult<T = undefined> =
   | { ok: false; error: string };
 
 /**
- * Fetches a playlist's metadata + video list from YouTube for the
- * add-playlist flow's preview step. Does not write anything — the
- * caller (client form) reviews/edits the result, then calls
- * `createPlaylist` to persist it.
+ * Fast preview: fetches the playlist listing only (one request, no
+ * per-video detail fetches), so it stays within short serverless
+ * timeouts even for large playlists. `uploadedAt`/`duration` on the
+ * returned videos may be 0 — the client backfills them by calling
+ * `fetchVideoDetailsBatch` in batches before saving.
  */
-export async function fetchPlaylistPreview(urlOrId: string) {
+export async function fetchPlaylistListingPreview(urlOrId: string) {
   await requireSession();
 
   if (typeof urlOrId !== "string" || urlOrId.trim().length === 0) {
     return { ok: false, error: "Enter a YouTube playlist URL or ID." } as const;
   }
 
-  const result = await fetchPlaylist(urlOrId.trim());
+  const result = await fetchPlaylistListing(urlOrId.trim());
+  if (!result.ok) {
+    return { ok: false, error: result.error } as const;
+  }
+
+  return { ok: true, data: result.data } as const;
+}
+
+/**
+ * Fetches `uploadedAt`/`duration` for a batch of video IDs. The
+ * add-playlist client calls this repeatedly with small slices (with a
+ * progress indicator) so each request stays short, instead of fetching
+ * all details in one long request that would time out.
+ */
+export async function fetchVideoDetailsBatch(videoIds: string[]) {
+  await requireSession();
+
+  if (!Array.isArray(videoIds) || videoIds.some((id) => typeof id !== "string")) {
+    return { ok: false, error: "Invalid video IDs." } as const;
+  }
+  // Cap the batch size so a caller can't force a long-running request.
+  // Each detail fetch is ~1s incl. the anti-rate-limit delay, so keep
+  // this small enough that a full batch stays under serverless timeouts
+  // (e.g. Netlify's 10s sync function limit).
+  if (videoIds.length > 6) {
+    return { ok: false, error: "Batch too large (max 6)." } as const;
+  }
+
+  const result = await fetchVideoDetails(videoIds);
   if (!result.ok) {
     return { ok: false, error: result.error } as const;
   }

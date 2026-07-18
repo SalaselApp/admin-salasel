@@ -3,8 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { fetchPlaylistPreview, createPlaylist } from "@/lib/actions/playlists";
+import {
+  fetchPlaylistListingPreview,
+  fetchVideoDetailsBatch,
+  createPlaylist,
+} from "@/lib/actions/playlists";
 import type { FetchedPlaylist, FetchedVideo } from "@/lib/youtube/fetch";
+
+// How many videos' details to fetch per request. Each YouTube getInfo
+// call is ~0.8-1s plus a 300ms anti-rate-limit delay, so a batch of 5
+// runs in ~6s — comfortably under a 10s serverless function timeout —
+// while the client loops through the whole playlist with a progress bar.
+const DETAIL_BATCH_SIZE = 5;
 import { PlaylistThumbnail } from "./playlist-thumbnail";
 import { VideoListEditor, type EditableVideo } from "./video-list-editor";
 import { ThumbnailPicker } from "../thumbnail-picker";
@@ -40,20 +50,63 @@ export function AddPlaylistForm() {
   const [error, setError] = useState<string | null>(null);
   const [isFetching, startFetch] = useTransition();
   const [isSaving, startSave] = useTransition();
+  // Progress of the per-video detail backfill: null when idle, otherwise
+  // { done, total } fetched so far.
+  const [detailProgress, setDetailProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   function handleFetch(formData: FormData) {
     setError(null);
     const value = String(formData.get("urlOrId") ?? "");
     startFetch(async () => {
-      const result = await fetchPlaylistPreview(value);
+      // Phase 1: fast listing-only fetch (single short request).
+      const result = await fetchPlaylistListingPreview(value);
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setPreview(result.data);
-      setName(result.data.name);
-      setThumbnailId(result.data.thumbnailId);
-      setVideos(toEditableVideos(result.data.videos));
+
+      const listing = result.data;
+      const editable = toEditableVideos(listing.videos);
+
+      setPreview(listing);
+      setName(listing.name);
+      setThumbnailId(listing.thumbnailId);
+      setVideos(editable);
+
+      // Phase 2: backfill uploadedAt/duration in small batches so each
+      // request stays short. Show progress; a failed batch is skipped
+      // (those videos keep 0s and can be re-synced later) rather than
+      // aborting the whole add flow.
+      const ids = editable.map((v) => v.id);
+      setDetailProgress({ done: 0, total: ids.length });
+
+      for (let i = 0; i < ids.length; i += DETAIL_BATCH_SIZE) {
+        const slice = ids.slice(i, i + DETAIL_BATCH_SIZE);
+        const batch = await fetchVideoDetailsBatch(slice);
+        if (batch.ok) {
+          const byId = new Map(batch.data.map((d) => [d.id, d]));
+          setVideos((prev) =>
+            prev.map((v) => {
+              const d = byId.get(v.id);
+              if (!d) return v;
+              return {
+                ...v,
+                duration: v.duration || d.duration,
+                uploadedAt: v.uploadedAt || d.uploadedAt,
+              };
+            }),
+          );
+        }
+        setDetailProgress({
+          done: Math.min(i + DETAIL_BATCH_SIZE, ids.length),
+          total: ids.length,
+        });
+      }
+
+      setDetailProgress(null);
     });
   }
 
@@ -174,6 +227,30 @@ export function AddPlaylistForm() {
             details below.
           </p>
 
+          {detailProgress && (
+            <div className="mb-4 flex flex-col gap-1.5">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
+                <span className="material-icons-round animate-spin text-base">
+                  progress_activity
+                </span>
+                Fetching video details… {detailProgress.done} /{" "}
+                {detailProgress.total}
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{
+                    width: `${
+                      detailProgress.total
+                        ? (detailProgress.done / detailProgress.total) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className={labelClasses()}>
@@ -200,13 +277,17 @@ export function AddPlaylistForm() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || detailProgress !== null}
             className="flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
           >
             <span className="material-icons-round text-base">
               {isSaving ? "hourglass_empty" : "save"}
             </span>
-            {isSaving ? "Saving…" : "Save playlist"}
+            {isSaving
+              ? "Saving…"
+              : detailProgress !== null
+                ? "Fetching details…"
+                : "Save playlist"}
           </button>
           <button
             type="button"
