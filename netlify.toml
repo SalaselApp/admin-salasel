@@ -15,3 +15,17 @@
 [build.environment]
   # Next 16 needs Node >= 20.9; pin the current LTS for reproducible builds.
   NODE_VERSION = "22"
+
+  # Netlify's secret scanner treats every env var as a potential secret and
+  # fails the build if its value appears in build output. These three are
+  # NON-secret config whose low-entropy values unavoidably collide with
+  # normal code/build strings, so we exclude them from scanning:
+  #   APP_ENV         = "production"  → the literal word "production" is in
+  #                     every Next build chunk (and our NODE_ENV check).
+  #   PUBLIC_SITE_URL = the public site URL, intentionally public.
+  #   LOCKOUT_MS      = "60000"       → a common timeout value found across
+  #                     Next's own internals.
+  # The real secrets (ADMIN_PASSWORD, SESSION_SECRET, *_SERVICE_ROLE_KEY,
+  # *_ANON_KEY, REVALIDATE_SECRET) are high-entropy, never appear in output,
+  # and are deliberately NOT omitted — they stay scanned.
+  SECRETS_SCAN_OMIT_KEYS = "APP_ENV,PUBLIC_SITE_URL,LOCKOUT_MS"
