@@ -1,0 +1,17 @@
+# Netlify build configuration for the Salasel Admin (Next.js 16, App Router).
+#
+# The official @netlify/plugin-nextjs (auto-installed by Netlify when it
+# detects Next.js) turns the server components / server actions / route
+# handlers into serverless functions, so no `output` tweaks are needed.
+#
+# Environment variables are NOT set here (secrets don't belong in the repo).
+# Set them in the Netlify UI: Site configuration → Environment variables.
+# See .env.example for the full list.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next 16 needs Node >= 20.9; pin the current LTS for reproducible builds.
+  NODE_VERSION = "22"
