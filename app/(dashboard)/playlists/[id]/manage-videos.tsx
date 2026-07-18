@@ -39,6 +39,8 @@ function formatDate(unixSeconds: number): string {
  * (`removeVideo`). Each op hits the server immediately; local state is
  * kept in sync so the UI stays responsive.
  */
+const INITIAL_VIDEO_COUNT = 10;
+
 export function ManageVideos({
   playlistId,
   initialVideos,
@@ -48,6 +50,7 @@ export function ManageVideos({
 }) {
   const [videos, setVideos] = useState<Video[]>(initialVideos);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const [, startReorder] = useTransition();
 
   function persistOrder(next: Video[]) {
@@ -92,26 +95,52 @@ export function ManageVideos({
           This playlist has no videos.
         </p>
       ) : (
-        <DragDropProvider
-          onDragEnd={(event) => {
-            if (event.canceled) return;
-            persistOrder(move(videos, event));
-          }}
-        >
-          <div className="divide-y divide-gray-200 dark:divide-slate-700">
-            {videos.map((video, index) => (
-              <VideoRow
-                key={video.id}
-                video={video}
-                index={index}
-                playlistId={playlistId}
-                onTitleSaved={handleTitleSaved}
-                onRemoved={handleRemoved}
-                onError={setError}
-              />
-            ))}
-          </div>
-        </DragDropProvider>
+        (() => {
+          const isCollapsible = videos.length > INITIAL_VIDEO_COUNT;
+          const visibleVideos =
+            isCollapsible && !expanded
+              ? videos.slice(0, INITIAL_VIDEO_COUNT)
+              : videos;
+          const hiddenCount = videos.length - visibleVideos.length;
+
+          return (
+            <>
+              <DragDropProvider
+                onDragEnd={(event) => {
+                  if (event.canceled) return;
+                  persistOrder(move(videos, event));
+                }}
+              >
+                <div className="divide-y divide-gray-200 dark:divide-slate-700">
+                  {visibleVideos.map((video, index) => (
+                    <VideoRow
+                      key={video.id}
+                      video={video}
+                      index={index}
+                      playlistId={playlistId}
+                      onTitleSaved={handleTitleSaved}
+                      onRemoved={handleRemoved}
+                      onError={setError}
+                    />
+                  ))}
+                </div>
+              </DragDropProvider>
+
+              {isCollapsible && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="flex w-full items-center justify-center gap-1.5 border-t border-gray-200 bg-gray-50 px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-gray-100 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                >
+                  <span className="material-icons-round text-base">
+                    {expanded ? "expand_less" : "expand_more"}
+                  </span>
+                  {expanded ? "Show fewer" : `Load all (${hiddenCount} more)`}
+                </button>
+              )}
+            </>
+          );
+        })()
       )}
     </div>
   );

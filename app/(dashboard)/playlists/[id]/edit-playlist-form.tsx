@@ -2,14 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 import type { Playlist } from "@/lib/models/playlist";
 import type { Video } from "@/lib/models/video";
 import { updatePlaylistMeta, deletePlaylist } from "@/lib/actions/playlists";
-import { videoThumbnailUrl } from "@/lib/youtube/thumbnail";
 import { Categories, Classes } from "@/types";
 import { PlaylistThumbnail } from "../new/playlist-thumbnail";
+import { ThumbnailPicker } from "../thumbnail-picker";
 import {
   PlaylistFields,
   inputClasses,
@@ -119,36 +118,11 @@ export function EditPlaylistForm({
               <p className="mb-2 mt-4 text-xs font-medium text-gray-500 dark:text-slate-400">
                 Pick from playlist videos
               </p>
-              <div className="grid grid-cols-3 gap-2">
-                {videos.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setThumbnailId(v.id)}
-                    aria-label={`Use "${v.title}" as thumbnail`}
-                    className={`relative aspect-video overflow-hidden rounded-md border-2 transition-colors ${
-                      thumbnailId === v.id
-                        ? "border-primary"
-                        : "border-transparent hover:border-primary/50"
-                    }`}
-                  >
-                    <Image
-                      src={videoThumbnailUrl(v.id)}
-                      alt={v.title}
-                      fill
-                      sizes="100px"
-                      className="object-cover"
-                    />
-                    {thumbnailId === v.id && (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <span className="material-icons-round text-lg leading-none text-white">
-                          check_circle
-                        </span>
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
+              <ThumbnailPicker
+                videos={videos}
+                selectedId={thumbnailId}
+                onSelect={setThumbnailId}
+              />
             </>
           )}
         </div>

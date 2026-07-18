@@ -35,12 +35,22 @@ function formatDuration(seconds: number): string {
  * array order of the `videos` prop — the caller is responsible for
  * persisting it (e.g. via `reorderVideos`) once a playlist exists.
  */
+// How many videos to show before the user expands the full list. Long
+// playlists (60+ episodes) otherwise push the save button far off-screen.
+const INITIAL_VIDEO_COUNT = 10;
+
 export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
+  const [expanded, setExpanded] = useState(false);
   const includedCount = videos.filter((v) => v.included).length;
 
   function updateVideo(id: string, patch: Partial<EditableVideo>) {
     onChange(videos.map((v) => (v.id === id ? { ...v, ...patch } : v)));
   }
+
+  const isCollapsible = videos.length > INITIAL_VIDEO_COUNT;
+  const visibleVideos =
+    isCollapsible && !expanded ? videos.slice(0, INITIAL_VIDEO_COUNT) : videos;
+  const hiddenCount = videos.length - visibleVideos.length;
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-surface-light shadow-sm dark:border-slate-700 dark:bg-surface-dark">
@@ -60,7 +70,7 @@ export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
         }}
       >
         <div className="divide-y divide-gray-200 dark:divide-slate-700">
-          {videos.map((video, index) => (
+          {visibleVideos.map((video, index) => (
             <VideoRow
               key={video.id}
               video={video}
@@ -70,6 +80,19 @@ export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
           ))}
         </div>
       </DragDropProvider>
+
+      {isCollapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-center gap-1.5 border-t border-gray-200 bg-gray-50 px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-gray-100 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+        >
+          <span className="material-icons-round text-base">
+            {expanded ? "expand_less" : "expand_more"}
+          </span>
+          {expanded ? "Show fewer" : `Load all (${hiddenCount} more)`}
+        </button>
+      )}
     </div>
   );
 }
