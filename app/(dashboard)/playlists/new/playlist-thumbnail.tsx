@@ -41,6 +41,7 @@ export function PlaylistThumbnail({ videoId, alt }: PlaylistThumbnailProps) {
         src={imageUrl}
         alt={alt}
         fill
+        priority
         sizes="(max-width: 1024px) 100vw, 288px"
         className="object-cover"
         onError={() => setFailedVideoId(videoId)}
