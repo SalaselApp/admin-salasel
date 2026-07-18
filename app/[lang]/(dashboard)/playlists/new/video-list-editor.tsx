@@ -7,6 +7,8 @@ import { move } from "@dnd-kit/helpers";
 import { useSortable } from "@dnd-kit/react/sortable";
 
 import type { FetchedVideo } from "@/lib/youtube/fetch";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
 
 export interface EditableVideo extends FetchedVideo {
@@ -16,6 +18,7 @@ export interface EditableVideo extends FetchedVideo {
 export interface VideoListEditorProps {
   videos: EditableVideo[];
   onChange: (videos: EditableVideo[]) => void;
+  dict: Dictionary;
 }
 
 function formatDuration(seconds: number): string {
@@ -39,7 +42,12 @@ function formatDuration(seconds: number): string {
 // playlists (60+ episodes) otherwise push the save button far off-screen.
 const INITIAL_VIDEO_COUNT = 10;
 
-export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
+export function VideoListEditor({
+  videos,
+  onChange,
+  dict,
+}: VideoListEditorProps) {
+  const t = dict.videos;
   const [expanded, setExpanded] = useState(false);
   const includedCount = videos.filter((v) => v.included).length;
 
@@ -56,10 +64,13 @@ export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-surface-light shadow-sm dark:border-slate-700 dark:bg-surface-dark">
       <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
         <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
-          Videos
+          {t.heading}
         </h2>
         <span className="text-sm font-medium text-gray-500 dark:text-slate-400">
-          {includedCount} / {videos.length} included
+          {interpolate(t.countIncluded, {
+            included: includedCount,
+            total: videos.length,
+          })}
         </span>
       </div>
 
@@ -76,6 +87,7 @@ export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
               video={video}
               index={index}
               onChange={(patch) => updateVideo(video.id, patch)}
+              dict={dict}
             />
           ))}
         </div>
@@ -90,7 +102,9 @@ export function VideoListEditor({ videos, onChange }: VideoListEditorProps) {
           <span className="material-icons-round text-base">
             {expanded ? "expand_less" : "expand_more"}
           </span>
-          {expanded ? "Show fewer" : `Load all (${hiddenCount} more)`}
+          {expanded
+            ? t.showFewer
+            : interpolate(t.loadAll, { count: hiddenCount })}
         </button>
       )}
     </div>
@@ -101,10 +115,12 @@ function VideoRow({
   video,
   index,
   onChange,
+  dict,
 }: {
   video: EditableVideo;
   index: number;
   onChange: (patch: Partial<EditableVideo>) => void;
+  dict: Dictionary;
 }) {
   const [imageUrl, setImageUrl] = useState(videoThumbnailUrl(video.id));
   const { ref, handleRef, isDragging } = useSortable({ id: video.id, index });
@@ -119,7 +135,9 @@ function VideoRow({
       <button
         ref={handleRef}
         type="button"
-        aria-label={`Drag to reorder "${video.title}"`}
+        aria-label={interpolate(dict.videos.dragToReorder, {
+          title: video.title,
+        })}
         className="cursor-grab touch-none text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
       >
         <span className="material-icons-round text-lg">drag_indicator</span>
@@ -129,7 +147,7 @@ function VideoRow({
         type="checkbox"
         checked={video.included}
         onChange={(e) => onChange({ included: e.target.checked })}
-        aria-label={`Include "${video.title}"`}
+        aria-label={interpolate(dict.videos.include, { title: video.title })}
         className="accent-primary"
       />
 

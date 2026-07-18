@@ -7,6 +7,10 @@ import type { Playlist } from "@/lib/models/playlist";
 import type { Video } from "@/lib/models/video";
 import { updatePlaylistMeta, deletePlaylist } from "@/lib/actions/playlists";
 import { Categories, Classes } from "@/types";
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { localeHref } from "@/lib/i18n/navigation";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { PlaylistThumbnail } from "../new/playlist-thumbnail";
 import { ThumbnailPicker } from "../thumbnail-picker";
 import {
@@ -32,10 +36,15 @@ function playlistToManualFields(playlist: Playlist): ManualFieldsState {
 export function EditPlaylistForm({
   playlist,
   videos,
+  locale,
+  dict,
 }: {
   playlist: Playlist;
   videos: Video[];
+  locale: Locale;
+  dict: Dictionary;
 }) {
+  const t = dict.playlist;
   const router = useRouter();
   const [name, setName] = useState(playlist.name);
   const [thumbnailId, setThumbnailId] = useState(playlist.thumbnailId);
@@ -52,11 +61,11 @@ export function EditPlaylistForm({
     setSaved(false);
 
     if (name.trim().length === 0) {
-      setError("Name is required.");
+      setError(t.nameRequired);
       return;
     }
     if (manual.categories.size === 0) {
-      setError("Select at least one category.");
+      setError(t.categoryRequired);
       return;
     }
 
@@ -86,11 +95,7 @@ export function EditPlaylistForm({
   }
 
   function handleDelete() {
-    if (
-      !confirm(
-        `Delete "${playlist.name}" and all its videos? This cannot be undone.`,
-      )
-    ) {
+    if (!confirm(interpolate(t.deleteConfirm, { name: playlist.name }))) {
       return;
     }
     setError(null);
@@ -100,7 +105,7 @@ export function EditPlaylistForm({
         setError(result.error);
         return;
       }
-      router.push("/");
+      router.push(localeHref(locale, "/"));
       router.refresh();
     });
   }
@@ -110,18 +115,19 @@ export function EditPlaylistForm({
       {/* Left: thumbnail preview + picker */}
       <div className="w-full shrink-0 lg:w-72">
         <div className="rounded-xl border border-gray-200 bg-surface-light p-4 shadow-sm dark:border-slate-700 dark:bg-surface-dark">
-          <p className={`${labelClasses()} mb-2`}>Thumbnail</p>
+          <p className={`${labelClasses()} mb-2`}>{t.thumbnail}</p>
           <PlaylistThumbnail videoId={thumbnailId} alt={name} />
 
           {videos.length > 0 && (
             <>
               <p className="mb-2 mt-4 text-xs font-medium text-gray-500 dark:text-slate-400">
-                Pick from playlist videos
+                {t.pickFromVideos}
               </p>
               <ThumbnailPicker
                 videos={videos}
                 selectedId={thumbnailId}
                 onSelect={setThumbnailId}
+                dict={dict}
               />
             </>
           )}
@@ -132,9 +138,7 @@ export function EditPlaylistForm({
       <div className="flex-1 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-surface-light p-6 shadow-sm dark:border-slate-700 dark:bg-surface-dark">
           <div className="mb-4 flex flex-col gap-1.5">
-            <label className={labelClasses()}>
-              YouTube playlist ID
-            </label>
+            <label className={labelClasses()}>{t.youtubePlaylistId}</label>
             <input
               type="text"
               value={playlist.id}
@@ -145,7 +149,7 @@ export function EditPlaylistForm({
           </div>
 
           <div className="mb-4 flex flex-col gap-1.5">
-            <label className={labelClasses()}>Name</label>
+            <label className={labelClasses()}>{t.name}</label>
             <input
               type="text"
               value={name}
@@ -154,15 +158,18 @@ export function EditPlaylistForm({
             />
           </div>
 
-          <PlaylistFields value={manual} onChange={setManual} />
+          <PlaylistFields value={manual} onChange={setManual} dict={dict} />
         </div>
 
-        <ManageVideos playlistId={playlist.id} initialVideos={videos} />
+        <ManageVideos
+          playlistId={playlist.id}
+          initialVideos={videos}
+          locale={locale}
+          dict={dict}
+        />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
-        {saved && (
-          <p className="text-sm text-primary">Changes saved.</p>
-        )}
+        {saved && <p className="text-sm text-primary">{t.savedNotice}</p>}
 
         <div className="flex flex-wrap gap-3">
           <button
@@ -174,18 +181,18 @@ export function EditPlaylistForm({
             <span className="material-icons-round text-base">
               {isSaving ? "hourglass_empty" : "save"}
             </span>
-            {isSaving ? "Saving…" : "Save changes"}
+            {isSaving ? t.saving : t.saveChanges}
           </button>
           <button
             type="button"
             onClick={handleDelete}
             disabled={isSaving || isDeleting}
-            className="ml-auto flex items-center gap-1.5 rounded-full border border-red-300 px-5 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/50"
+            className="ms-auto flex items-center gap-1.5 rounded-full border border-red-300 px-5 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/50"
           >
             <span className="material-icons-round text-base">
               {isDeleting ? "hourglass_empty" : "delete"}
             </span>
-            {isDeleting ? "Deleting…" : "Delete playlist"}
+            {isDeleting ? t.deleting : t.deletePlaylist}
           </button>
         </div>
       </div>

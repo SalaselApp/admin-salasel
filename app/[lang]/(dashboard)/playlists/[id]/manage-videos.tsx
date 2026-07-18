@@ -12,6 +12,9 @@ import {
   reorderVideos,
   updateVideoTitle,
 } from "@/lib/actions/videos";
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
 
 function formatDuration(seconds: number): string {
@@ -24,9 +27,9 @@ function formatDuration(seconds: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-function formatDate(unixSeconds: number): string {
+function formatDate(unixSeconds: number, locale: Locale): string {
   if (!unixSeconds) return "—";
-  return new Date(unixSeconds * 1000).toLocaleDateString(undefined, {
+  return new Date(unixSeconds * 1000).toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -44,10 +47,15 @@ const INITIAL_VIDEO_COUNT = 10;
 export function ManageVideos({
   playlistId,
   initialVideos,
+  locale,
+  dict,
 }: {
   playlistId: string;
   initialVideos: Video[];
+  locale: Locale;
+  dict: Dictionary;
 }) {
+  const t = dict.videos;
   const [videos, setVideos] = useState<Video[]>(initialVideos);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -77,10 +85,15 @@ export function ManageVideos({
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-surface-light shadow-sm dark:border-slate-700 dark:bg-surface-dark">
       <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4 dark:border-slate-700 dark:bg-slate-800/50">
         <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100">
-          Videos
+          {t.heading}
         </h2>
         <span className="text-sm font-medium text-gray-500 dark:text-slate-400">
-          {videos.length} video{videos.length === 1 ? "" : "s"}
+          {interpolate(
+            videos.length === 1
+              ? dict.dashboard.videoCount
+              : dict.dashboard.videoCountPlural,
+            { count: videos.length },
+          )}
         </span>
       </div>
 
@@ -92,7 +105,7 @@ export function ManageVideos({
 
       {videos.length === 0 ? (
         <p className="px-6 py-10 text-center text-sm text-gray-500 dark:text-slate-400">
-          This playlist has no videos.
+          {t.empty}
         </p>
       ) : (
         (() => {
@@ -121,6 +134,8 @@ export function ManageVideos({
                       onTitleSaved={handleTitleSaved}
                       onRemoved={handleRemoved}
                       onError={setError}
+                      locale={locale}
+                      dict={dict}
                     />
                   ))}
                 </div>
@@ -135,7 +150,9 @@ export function ManageVideos({
                   <span className="material-icons-round text-base">
                     {expanded ? "expand_less" : "expand_more"}
                   </span>
-                  {expanded ? "Show fewer" : `Load all (${hiddenCount} more)`}
+                  {expanded
+                    ? t.showFewer
+                    : interpolate(t.loadAll, { count: hiddenCount })}
                 </button>
               )}
             </>
@@ -153,6 +170,8 @@ function VideoRow({
   onTitleSaved,
   onRemoved,
   onError,
+  locale,
+  dict,
 }: {
   video: Video;
   index: number;
@@ -160,6 +179,8 @@ function VideoRow({
   onTitleSaved: (id: string, title: string) => void;
   onRemoved: (id: string) => void;
   onError: (message: string | null) => void;
+  locale: Locale;
+  dict: Dictionary;
 }) {
   const [imageUrl, setImageUrl] = useState(videoThumbnailUrl(video.id));
   const [title, setTitle] = useState(video.title);
@@ -182,7 +203,8 @@ function VideoRow({
   }
 
   function handleRemove() {
-    if (!confirm(`Remove "${video.title}" from this playlist?`)) return;
+    if (!confirm(interpolate(dict.videos.removeConfirm, { title: video.title })))
+      return;
     onError(null);
     startTransition(async () => {
       const result = await removeVideo(playlistId, video.id);
@@ -204,7 +226,9 @@ function VideoRow({
       <button
         ref={handleRef}
         type="button"
-        aria-label={`Drag to reorder "${video.title}"`}
+        aria-label={interpolate(dict.videos.dragToReorder, {
+          title: video.title,
+        })}
         className="cursor-grab touch-none text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:text-slate-500 dark:hover:text-slate-300"
       >
         <span className="material-icons-round text-lg">drag_indicator</span>
@@ -233,7 +257,7 @@ function VideoRow({
           className="rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-gray-900 outline-none hover:border-gray-300 focus:border-primary focus:ring-1 focus:ring-primary dark:text-slate-100 dark:hover:border-slate-600"
         />
         <span className="px-2 text-xs text-gray-400 dark:text-slate-500">
-          {formatDate(video.uploadedAt)}
+          {formatDate(video.uploadedAt, locale)}
         </span>
       </div>
 
@@ -245,7 +269,7 @@ function VideoRow({
         type="button"
         onClick={handleRemove}
         disabled={isPending}
-        aria-label={`Remove "${video.title}"`}
+        aria-label={interpolate(dict.videos.remove, { title: video.title })}
         className="text-gray-400 transition-colors hover:text-red-500 disabled:opacity-50 dark:text-slate-500"
       >
         <span className="material-icons-round text-lg">delete_outline</span>

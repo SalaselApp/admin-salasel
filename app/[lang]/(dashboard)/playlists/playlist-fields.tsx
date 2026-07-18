@@ -2,16 +2,19 @@
 
 import {
   Categories,
-  CATEGORY_LABELS,
   Classes,
-  CLASS_LABELS,
   ContentTypes,
-  CONTENT_TYPE_LABELS,
   LANGUAGES,
   PresentationStyles,
-  PRESENTATION_STYLE_LABELS,
   type Language,
 } from "@/types";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import {
+  categoryLabel,
+  classLabel,
+  contentTypeLabel,
+  presentationStyleLabel,
+} from "@/lib/i18n/labels";
 
 const CATEGORY_OPTIONS = Object.values(Categories).filter(
   (v): v is Categories => typeof v === "number",
@@ -84,14 +87,17 @@ function toggleSetValue<T>(set: Set<T>, value: T): Set<T> {
 export function PlaylistFields({
   value,
   onChange,
+  dict,
 }: {
   value: ManualFieldsState;
   onChange: (next: ManualFieldsState) => void;
+  dict: Dictionary;
 }) {
+  const t = dict.playlist;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className={labelClasses()}>Description</label>
+        <label className={labelClasses()}>{t.description}</label>
         <textarea
           value={value.description}
           onChange={(e) => onChange({ ...value, description: e.target.value })}
@@ -101,7 +107,7 @@ export function PlaylistFields({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className={labelClasses()}>Participants (comma-separated)</label>
+        <label className={labelClasses()}>{t.participants}</label>
         <input
           type="text"
           value={value.participants}
@@ -113,7 +119,7 @@ export function PlaylistFields({
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
           <label className={labelClasses()}>
-            Language
+            {t.language}
             <RequiredMark />
           </label>
           <select
@@ -133,7 +139,7 @@ export function PlaylistFields({
 
         <div className="flex flex-col gap-1.5">
           <label className={labelClasses()}>
-            Content type
+            {t.contentType}
             <RequiredMark />
           </label>
           <select
@@ -145,7 +151,7 @@ export function PlaylistFields({
           >
             {CONTENT_TYPE_OPTIONS.map((v) => (
               <option key={v} value={v}>
-                {CONTENT_TYPE_LABELS[v]}
+                {contentTypeLabel(dict, v)}
               </option>
             ))}
           </select>
@@ -153,7 +159,7 @@ export function PlaylistFields({
 
         <div className="flex flex-col gap-1.5">
           <label className={labelClasses()}>
-            Presentation style
+            {t.presentationStyle}
             <RequiredMark />
           </label>
           <select
@@ -168,7 +174,7 @@ export function PlaylistFields({
           >
             {PRESENTATION_STYLE_OPTIONS.map((v) => (
               <option key={v} value={v}>
-                {PRESENTATION_STYLE_LABELS[v]}
+                {presentationStyleLabel(dict, v)}
               </option>
             ))}
           </select>
@@ -177,7 +183,7 @@ export function PlaylistFields({
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className={labelClasses()}>
-          Categories
+          {t.categories}
           <RequiredMark />
         </legend>
         <div className="flex flex-wrap gap-3">
@@ -197,14 +203,14 @@ export function PlaylistFields({
                 }
                 className="accent-primary"
               />
-              {CATEGORY_LABELS[v]}
+              {categoryLabel(dict, v)}
             </label>
           ))}
         </div>
       </fieldset>
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className={labelClasses()}>Classes</legend>
+        <legend className={labelClasses()}>{t.classes}</legend>
         <div className="flex flex-wrap gap-3">
           {CLASS_OPTIONS.map((v) => (
             <label
@@ -222,7 +228,7 @@ export function PlaylistFields({
                 }
                 className="accent-primary"
               />
-              {CLASS_LABELS[v]}
+              {classLabel(dict, v)}
             </label>
           ))}
         </div>

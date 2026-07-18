@@ -1,13 +1,25 @@
 import { redirect } from "next/navigation";
 
 import { hasValidSession } from "@/lib/auth/session";
+import { getLocaleConfig } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { localeHref } from "@/lib/i18n/navigation";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const locale = getLocaleConfig(lang).code;
+
   const alreadySignedIn = await hasValidSession();
   if (alreadySignedIn) {
-    redirect("/");
+    redirect(localeHref(locale, "/"));
   }
+
+  const dict = await getDictionary(locale);
 
   return (
     <div className="flex flex-1 items-center justify-center bg-background-light dark:bg-background-dark">
@@ -15,10 +27,10 @@ export default async function LoginPage() {
         <div className="mb-6 flex items-center gap-2">
           <span className="material-icons-round text-primary">ondemand_video</span>
           <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">
-            Salasel Admin
+            {dict.appTitle}
           </h1>
         </div>
-        <LoginForm />
+        <LoginForm dict={dict.login} locale={locale} />
       </div>
     </div>
   );

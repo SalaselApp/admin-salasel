@@ -3,20 +3,36 @@
 import { useActionState } from "react";
 
 import { login, type LoginState } from "@/lib/actions/auth";
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 const initialState: LoginState = {};
 
-export function LoginForm() {
+export function LoginForm({
+  dict,
+  locale,
+}: {
+  dict: Dictionary["login"];
+  locale: Locale;
+}) {
   const [state, action, pending] = useActionState(login, initialState);
+
+  const errorMessage =
+    state?.errorCode === "locked"
+      ? dict.tooManyAttempts
+      : state?.errorCode === "incorrect"
+        ? dict.incorrectPassword
+        : null;
 
   return (
     <form action={action} className="flex flex-col gap-4">
+      <input type="hidden" name="locale" value={locale} />
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="password"
           className="text-sm font-medium text-gray-700 dark:text-slate-300"
         >
-          Password
+          {dict.passwordLabel}
         </label>
         <input
           id="password"
@@ -29,16 +45,14 @@ export function LoginForm() {
         />
       </div>
 
-      {state?.error && (
-        <p className="text-sm text-red-500">{state.error}</p>
-      )}
+      {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}
 
       <button
         type="submit"
         disabled={pending}
         className="mt-2 cursor-pointer rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
       >
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? dict.signingIn : dict.signIn}
       </button>
     </form>
   );

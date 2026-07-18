@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { videoThumbnailUrl } from "@/lib/youtube/thumbnail";
 
 // 3-column grid → 3 rows visible before "Load more".
@@ -24,10 +26,12 @@ export function ThumbnailPicker({
   videos,
   selectedId,
   onSelect,
+  dict,
 }: {
   videos: ThumbnailOption[];
   selectedId: string;
   onSelect: (id: string) => void;
+  dict: Dictionary;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -54,7 +58,9 @@ export function ThumbnailPicker({
             key={v.id}
             type="button"
             onClick={() => onSelect(v.id)}
-            aria-label={`Use "${v.title}" as thumbnail`}
+            aria-label={interpolate(dict.videos.useAsThumbnail, {
+              title: v.title,
+            })}
             className={`relative aspect-video overflow-hidden rounded-md border-2 transition-colors ${
               selectedId === v.id
                 ? "border-primary"
@@ -88,7 +94,9 @@ export function ThumbnailPicker({
           <span className="material-icons-round text-sm">
             {expanded ? "expand_less" : "expand_more"}
           </span>
-          {expanded ? "Show fewer" : `Load more (${hiddenCount})`}
+          {expanded
+            ? dict.videos.showFewer
+            : interpolate(dict.videos.loadMore, { count: hiddenCount })}
         </button>
       )}
     </>

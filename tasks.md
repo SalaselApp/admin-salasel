@@ -117,12 +117,56 @@ present, links to `/playlists/new`.
   (`removeVideo`), thumbnail picker in the edit form updates
   `thumbnail_id`. Shows duration + upload date per row.
 
+### i18n (Arabic default) — DONE
+
+Full UI internationalization with Arabic (default, RTL) + English (LTR).
+Confirmed with the user: switcher IN the header, and handle RTL icon
+mirroring.
+
+- **Routing**: all pages moved under `app/[lang]/` (`(dashboard)` and
+  `login` route groups now nested there). Root `app/layout.tsx` is a
+  pass-through; the real `<html lang dir>` lives in `app/[lang]/layout.tsx`
+  with `generateStaticParams` for `ar`/`en`. Matches the public Salasel
+  app's `[lang]` pattern and Next 16's native i18n guide
+  (`node_modules/next/dist/docs/01-app/02-guides/internationalization.md`).
+  NB: Next 16 removed `unstable_rootParams`, so locale is passed via the
+  `[lang]` param, not `next/root-params`.
+- **i18n lib** (`lib/i18n/`): `config.ts` (locales list, default `ar`,
+  `isValidLocale`/`getLocaleConfig`), `dictionaries.ts` +
+  `dictionaries/{ar,en}.json` (server-only `getDictionary`, with a
+  `ar satisfies Dictionary` compile-time key-sync guard), `navigation.ts`
+  (`localeHref(locale, path)` — the one true way to build internal links),
+  `interpolate.ts` (`{placeholder}` substitution), `labels.ts` (localized
+  enum labels; Arabic values copied verbatim from the public app's
+  `public/i18n/ar.json` for consistency).
+- **Server components** fetch `dict` + `locale` and pass them down to
+  client components as props (no client-side dictionary bundle bloat).
+- **Language switcher** (`app/[lang]/language-switcher.tsx`): header
+  dropdown, swaps the leading `[lang]` URL segment via `usePathname` so you
+  stay on the same page. Adapted from the public app's `LanguageSwitcher`.
+- **RTL**: converted all physical-direction Tailwind classes to logical
+  ones (`ps-/pe-/ms-/me-/start-/end-`) in every touched component.
+  Directional icons (back arrow, breadcrumb chevron) use a new
+  `DirectionalIcon` that adds `rtl:-scale-x-100` so they mirror in Arabic;
+  symmetric icons (search, add, save, delete, drag, schedule…) are left
+  un-flipped. Verified the `rtl:` rule compiles scoped to `[dir="rtl"]`.
+- **proxy.ts**: single-pass locale + auth redirect (locale detection from
+  `NEXT_LOCALE` cookie → `Accept-Language` → default `ar`, then the auth
+  cookie rule applied to the locale-stripped path) so there's never a
+  chained locale→auth double redirect. Verified: `/` → `/ar/login` in one
+  hop (no session), `Accept-Language: en` → `/en/login`, invalid locale
+  `/fr` → `/ar/login`.
+- **Auth actions**: `login`/`logout` take the current `locale` (hidden form
+  field) and redirect via `localeHref`; login errors returned as codes
+  (`incorrect`/`locked`) translated client-side.
+- Verified: `lint` + `build` clean; dev-server click-through of both
+  locales incl. RTL layout, 404 wrapper, and switcher navigation.
+
 ### Still open
 
 - **Re-sync from YouTube button**: the `resyncPlaylistVideos` action exists
   and now handles positions, but there's no button wired into the
   manage-videos UI yet. Quick add.
-- **i18n (Arabic default)** — see below, still the big remaining task.
 
 ### 3. Remaining flows from the original plan
 
@@ -137,28 +181,11 @@ Per `.kiro/steering/admin.md`, still not built:
 - **Delete playlist** — confirm dialog, calls `deletePlaylist` (action
   already exists in `lib/actions/playlists.ts`).
 
-### 4. i18n — Arabic default
+### 4. i18n — Arabic default — DONE
 
-Full i18n for the admin UI itself (not the content, which already has a
-`language` field per playlist). User wants Arabic as the default locale.
-
-Things to figure out before implementing, flag to user if unclear:
-- Arabic is RTL — this needs `dir="rtl"` handling, and Tailwind's logical
-  properties (`ps-`/`pe-`/`start-`/`end-` instead of `pl-`/`pr-`/
-  `left-`/`right-`) or a lot of the existing layout (e.g. the sidebar/
-  header, thumbnail picker grid, video row layout) may visually break in
-  RTL. The public Salasel app already solved this — check
-  `/home/amjad/repo/Salasel/app/[lang]/` and `I18N.md` in that repo for
-  the established pattern (it uses `[lang]` route segments +
-  `getTranslations`/`Translations` type) before inventing a new approach.
-- Decide: does the admin need per-user language switching (like the
-  public site's `LanguageSwitcher`), or is "Arabic by default, no
-  switcher" sufficient since it's a small trusted-editor tool? Ask the
-  user — don't assume.
-- This will touch almost every existing component (all current UI is
-  hardcoded English) — expect this to be the largest of the four tasks.
-  Do it last, as the user requested, so it doesn't block the
-  functionality-only work above.
+See the "i18n (Arabic default) — DONE" section above for the full
+implementation notes. Decision made with the user: switcher IS in the
+header; Arabic default + English, both fully supported.
 
 ## Notes / gotchas discovered this session
 

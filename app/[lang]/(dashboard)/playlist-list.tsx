@@ -5,13 +5,12 @@ import Link from "next/link";
 import Image from "next/image";
 
 import type { Playlist } from "@/lib/models/playlist";
-import {
-  ContentTypes,
-  CONTENT_TYPE_LABELS,
-  LANGUAGES,
-  PRESENTATION_STYLE_LABELS,
-  type Language,
-} from "@/types";
+import { ContentTypes, LANGUAGES, type Language } from "@/types";
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { localeHref } from "@/lib/i18n/navigation";
+import { interpolate } from "@/lib/i18n/interpolate";
+import { contentTypeLabel, presentationStyleLabel } from "@/lib/i18n/labels";
 import { videoThumbnailUrl, fallbackThumbnailUrl } from "@/lib/youtube/thumbnail";
 
 const CONTENT_TYPE_OPTIONS = Object.values(ContentTypes).filter(
@@ -26,7 +25,16 @@ function formatDuration(seconds: number): string {
   return `${m}m`;
 }
 
-export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
+export function PlaylistList({
+  playlists,
+  locale,
+  dict,
+}: {
+  playlists: Playlist[];
+  locale: Locale;
+  dict: Dictionary;
+}) {
+  const t = dict.dashboard;
   const [query, setQuery] = useState("");
   const [language, setLanguage] = useState<Language | "all">("all");
   const [type, setType] = useState<ContentTypes | "all">("all");
@@ -53,38 +61,38 @@ export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
     <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
-          Playlists
+          {t.heading}
         </h1>
         <Link
-          href="/playlists/new"
+          href={localeHref(locale, "/playlists/new")}
           className="flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
         >
           <span className="material-icons-round text-base">add</span>
-          Add playlist
+          {t.addPlaylist}
         </Link>
       </div>
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <span className="material-icons-round pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-gray-400 dark:text-slate-500">
+          <span className="material-icons-round pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-lg text-gray-400 dark:text-slate-500">
             search
           </span>
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name"
-            className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            placeholder={t.searchPlaceholder}
+            className="w-full rounded-full border border-gray-300 bg-white py-2.5 pe-4 ps-10 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
 
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value as Language | "all")}
-          aria-label="Filter by language"
+          aria-label={t.filterByLanguage}
           className="rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         >
-          <option value="all">All languages</option>
+          <option value="all">{t.allLanguages}</option>
           {LANGUAGES.map((lang) => (
             <option key={lang} value={lang}>
               {lang.toUpperCase()}
@@ -97,13 +105,13 @@ export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
           onChange={(e) =>
             setType(e.target.value === "all" ? "all" : (Number(e.target.value) as ContentTypes))
           }
-          aria-label="Filter by content type"
+          aria-label={t.filterByContentType}
           className="rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
         >
-          <option value="all">All types</option>
+          <option value="all">{t.allTypes}</option>
           {CONTENT_TYPE_OPTIONS.map((v) => (
             <option key={v} value={v}>
-              {CONTENT_TYPE_LABELS[v]}
+              {contentTypeLabel(dict, v)}
             </option>
           ))}
         </select>
@@ -115,21 +123,24 @@ export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
             className="inline-flex items-center gap-1 rounded-full px-3 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:text-primary dark:text-slate-400"
           >
             <span className="material-icons-round text-base">close</span>
-            Clear
+            {t.clear}
           </button>
         )}
       </div>
 
       {filtered.length === 0 ? (
         <p className="py-16 text-center text-gray-500 dark:text-slate-400">
-          {playlists.length === 0
-            ? "No playlists yet. Add one to get started."
-            : "No playlists match your filters."}
+          {playlists.length === 0 ? t.emptyNoPlaylists : t.emptyNoMatches}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((playlist) => (
-            <PlaylistCard key={playlist.id} playlist={playlist} />
+            <PlaylistCard
+              key={playlist.id}
+              playlist={playlist}
+              locale={locale}
+              dict={dict}
+            />
           ))}
         </div>
       )}
@@ -137,14 +148,29 @@ export function PlaylistList({ playlists }: { playlists: Playlist[] }) {
   );
 }
 
-function PlaylistCard({ playlist }: { playlist: Playlist }) {
+function PlaylistCard({
+  playlist,
+  locale,
+  dict,
+}: {
+  playlist: Playlist;
+  locale: Locale;
+  dict: Dictionary;
+}) {
   const [imageUrl, setImageUrl] = useState(
     videoThumbnailUrl(playlist.thumbnailId),
   );
 
+  const videoCountLabel = interpolate(
+    playlist.videoCount === 1
+      ? dict.dashboard.videoCount
+      : dict.dashboard.videoCountPlural,
+    { count: playlist.videoCount },
+  );
+
   return (
     <Link
-      href={`/playlists/${playlist.id}`}
+      href={localeHref(locale, `/playlists/${playlist.id}`)}
       className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-surface-light shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-surface-dark"
     >
       <div className="relative aspect-video w-full overflow-hidden bg-gray-100 dark:bg-slate-800">
@@ -156,8 +182,8 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
           className="object-cover"
           onError={() => setImageUrl(fallbackThumbnailUrl(playlist.thumbnailId))}
         />
-        <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
-          {playlist.videoCount} video{playlist.videoCount === 1 ? "" : "s"}
+        <span className="absolute bottom-2 end-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
+          {videoCountLabel}
         </span>
       </div>
 
@@ -177,11 +203,11 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="material-icons-round text-sm">category</span>
-            {CONTENT_TYPE_LABELS[playlist.type]}
+            {contentTypeLabel(dict, playlist.type)}
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="material-icons-round text-sm">mic</span>
-            {PRESENTATION_STYLE_LABELS[playlist.style]}
+            {presentationStyleLabel(dict, playlist.style)}
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="material-icons-round text-sm">schedule</span>

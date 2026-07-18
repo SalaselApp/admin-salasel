@@ -9,6 +9,10 @@ import {
   createPlaylist,
 } from "@/lib/actions/playlists";
 import type { FetchedPlaylist, FetchedVideo } from "@/lib/youtube/fetch";
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { localeHref } from "@/lib/i18n/navigation";
+import { interpolate } from "@/lib/i18n/interpolate";
 
 // How many videos' details to fetch per request. Each YouTube getInfo
 // call is ~0.8-1s plus a 300ms anti-rate-limit delay, so a batch of 5
@@ -39,7 +43,14 @@ function RequiredMark() {
   );
 }
 
-export function AddPlaylistForm() {
+export function AddPlaylistForm({
+  locale,
+  dict,
+}: {
+  locale: Locale;
+  dict: Dictionary;
+}) {
+  const t = dict.add;
   const router = useRouter();
   const [urlOrId, setUrlOrId] = useState("");
   const [preview, setPreview] = useState<FetchedPlaylist | null>(null);
@@ -115,13 +126,13 @@ export function AddPlaylistForm() {
     setError(null);
 
     if (manual.categories.size === 0) {
-      setError("Select at least one category.");
+      setError(t.atLeastOneCategory);
       return;
     }
 
     const includedVideos = videos.filter((v) => v.included);
     if (includedVideos.length === 0) {
-      setError("At least one video must be included.");
+      setError(t.atLeastOneVideo);
       return;
     }
 
@@ -155,7 +166,7 @@ export function AddPlaylistForm() {
         return;
       }
 
-      router.push("/");
+      router.push(localeHref(locale, "/"));
     });
   }
 
@@ -168,7 +179,7 @@ export function AddPlaylistForm() {
         >
           <div className="flex flex-col gap-1.5">
             <label htmlFor="urlOrId" className={labelClasses()}>
-              YouTube playlist URL or ID
+              {t.urlOrIdLabel}
             </label>
             <input
               id="urlOrId"
@@ -177,7 +188,7 @@ export function AddPlaylistForm() {
               required
               value={urlOrId}
               onChange={(e) => setUrlOrId(e.target.value)}
-              placeholder="https://www.youtube.com/playlist?list=..."
+              placeholder={t.urlPlaceholder}
               className={inputClasses()}
             />
           </div>
@@ -192,28 +203,34 @@ export function AddPlaylistForm() {
             <span className="material-icons-round text-base">
               {isFetching ? "hourglass_empty" : "cloud_download"}
             </span>
-            {isFetching ? "Fetching…" : "Fetch from YouTube"}
+            {isFetching ? t.fetching : t.fetchFromYoutube}
           </button>
         </form>
       </div>
     );
   }
 
+  const foundVideosLabel = interpolate(
+    preview.videos.length === 1 ? t.foundVideos : t.foundVideosPlural,
+    { count: preview.videos.length },
+  );
+
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       {/* Left: thumbnail preview + picker */}
       <div className="w-full shrink-0 lg:w-72">
         <div className="rounded-xl border border-gray-200 bg-surface-light p-4 shadow-sm dark:border-slate-700 dark:bg-surface-dark">
-          <p className={`${labelClasses()} mb-2`}>Thumbnail</p>
+          <p className={`${labelClasses()} mb-2`}>{dict.playlist.thumbnail}</p>
           <PlaylistThumbnail videoId={thumbnailId} alt={name} />
 
           <p className="mb-2 mt-4 text-xs font-medium text-gray-500 dark:text-slate-400">
-            Pick from playlist videos
+            {dict.playlist.pickFromVideos}
           </p>
           <ThumbnailPicker
             videos={videos}
             selectedId={thumbnailId}
             onSelect={setThumbnailId}
+            dict={dict}
           />
         </div>
       </div>
@@ -222,9 +239,7 @@ export function AddPlaylistForm() {
       <div className="flex-1 space-y-6">
         <div className="rounded-xl border border-gray-200 bg-surface-light p-6 shadow-sm dark:border-slate-700 dark:bg-surface-dark">
           <p className="mb-4 text-sm text-gray-500 dark:text-slate-400">
-            Found {preview.videos.length} video
-            {preview.videos.length === 1 ? "" : "s"}. Review and fill in the
-            details below.
+            {foundVideosLabel}
           </p>
 
           {detailProgress && (
@@ -233,8 +248,7 @@ export function AddPlaylistForm() {
                 <span className="material-icons-round animate-spin text-base">
                   progress_activity
                 </span>
-                Fetching video details… {detailProgress.done} /{" "}
-                {detailProgress.total}
+                {t.fetchingDetails} {detailProgress.done} / {detailProgress.total}
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
                 <div
@@ -254,7 +268,7 @@ export function AddPlaylistForm() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className={labelClasses()}>
-                Name
+                {dict.playlist.name}
                 <RequiredMark />
               </label>
               <input
@@ -265,11 +279,11 @@ export function AddPlaylistForm() {
               />
             </div>
 
-            <PlaylistFields value={manual} onChange={setManual} />
+            <PlaylistFields value={manual} onChange={setManual} dict={dict} />
           </div>
         </div>
 
-        <VideoListEditor videos={videos} onChange={setVideos} />
+        <VideoListEditor videos={videos} onChange={setVideos} dict={dict} />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -284,10 +298,10 @@ export function AddPlaylistForm() {
               {isSaving ? "hourglass_empty" : "save"}
             </span>
             {isSaving
-              ? "Saving…"
+              ? dict.playlist.saving
               : detailProgress !== null
-                ? "Fetching details…"
-                : "Save playlist"}
+                ? t.savingDetails
+                : t.savePlaylist}
           </button>
           <button
             type="button"
@@ -295,7 +309,7 @@ export function AddPlaylistForm() {
             disabled={isSaving}
             className="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            Back
+            {t.back}
           </button>
         </div>
       </div>
